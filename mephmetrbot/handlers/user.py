@@ -231,8 +231,20 @@ async def work_command(message: Message):
         last_work = last_work.replace(tzinfo=None)
 
     if last_work and (now - last_work).total_seconds() < 21600:
-        remaining_time = timedelta(hours=1) - (now - last_work)
-        await message.reply(f'⏳ Ты недавно ходил прятать <b>закладку</b>, подожди {remaining_time.seconds // 60} минут.', parse_mode='HTML')
+        remaining_time = timedelta(hours=6) - (now - last_work)
+        remaining_hours = remaining_time.seconds // 3600
+        remaining_minutes = (remaining_time.seconds % 3600) // 60
+
+        if remaining_hours > 0:
+            await message.reply(
+                f'⏳ Ты недавно ходил прятать <b>закладку</b>, подожди <code>{remaining_hours} часов</code> и <code>{remaining_minutes} минут.</code>',
+                parse_mode='HTML')
+        else:
+            await message.reply(
+                f'⏳ Ты недавно ходил прятать <b>закладку</b>, подожди <code>{remaining_minutes} минут.</code>',
+                parse_mode='HTML')
+
+
         return
 
     if random.randint(1, 100) > 50:
@@ -260,8 +272,17 @@ async def find_command(message: Message):
         last_find = last_find.replace(tzinfo=None)
 
     if last_find and (now - last_find).total_seconds() < 21600:
-        remaining_time = timedelta(hours=1) - (now - last_find)
-        await message.reply(f'⏳ Ты недавно <b>ходил за кладом, подожди {remaining_time.seconds // 60} минут.</b>', parse_mode='HTML')
+        remaining_time = timedelta(hours=6) - (now - last_find)
+        remaining_hours = remaining_time.days * 24 + remaining_time.seconds // 3600
+        remaining_minutes = (remaining_time.seconds % 3600) // 60
+
+        if remaining_hours > 0:
+            await message.reply(
+                f'⏳ <b>Ты недавно ходил за кладом, подожди</b> <code>{remaining_hours} часов</code> <b>и</b> <code>{remaining_minutes} минут.</code>',parse_mode='HTML')
+        else:
+            await message.reply(
+                f'⏳ <b>Ты недавно ходил за кладом, подожди</b> <code>{remaining_minutes} минут.</code>',
+                parse_mode='HTML')
         return
 
     if random.randint(1, 100) > 50:
@@ -389,7 +410,7 @@ async def bonus_command(message: Message):
 async def vipbonus_command(message: Message):
     user = await get_user(message.from_user.id)
 
-    if user.is_admin == 0 and user.is_tester == 0 and user.vip == 0:
+    if user.vip == 0 or user.vip is None:
         await message.reply("<b>🛑 Вы не имеете VIP-статуса!</b>", parse_mode='HTML')
         return
 
@@ -408,12 +429,72 @@ async def vipbonus_command(message: Message):
         await message.reply("<b>🛑 Вы уже получали сегодня бонус!</b>", parse_mode='HTML')
 
 
+games = {}
+
+@router.message(Command('play'))
+async def play_command(message: Message):
+    user_id = message.from_user.id
+    user = await get_user(message.from_user.id)
+    if user_id in games:
+        await message.reply("❌ <b>Вы уже начали игру. Подождите, пока завершится текущая игра.</b>", parse_mode='HTML')
+        return
+
+    last_play = user.last_play
+    now = datetime.now()
+
+    if last_play:
+        last_play = last_play.replace(tzinfo=None)
+
+    if last_play and (now - last_play).total_seconds() < 3600:
+        remaining_time = timedelta(hours=1) - (now - last_play)
+        remaining_hours = remaining_time.seconds // 3600
+        remaining_minutes = (remaining_time.seconds % 3600) // 60
+
+        if remaining_hours > 0:
+            await message.reply(f'<b>⏳ Ты недавно играл, подожди</b> <code>{remaining_hours} часов</code> <b>и</b><code>{remaining_minutes} минут.</code>', parse_mode='HTML')
+        else:
+            await message.reply(f'<b>⏳ Ты недавно играл, подожди </b><code>{remaining_minutes} минут.</code>', parse_mode='HTML')
+        return
+
+
+    secret_number = random.randint(1, 10)
+    games[user_id] = secret_number
+
+    await message.reply("🎮 <b>Игра началась! Угадай число от 1 до 10. Напиши его прямо сюда.</b>", parse_mode='HTML')
+
+@router.message()
+async def process_guess(message: Message):
+    user_id = message.from_user.id
+    user = await get_user(message.from_user.id)
+    if user_id not in games:
+        return
+
+
+    try:
+        guess = int(message.text)
+    except ValueError:
+        await message.reply("<b>❌ Пожалуйста, введи число от 1 до 10!</b>", parse_mode='HTML')
+        return
+
+    secret_number = games[user_id]
+
+    if guess == secret_number:
+        reward = random.randint(1, 20)
+        user.drug_count += reward
+        user.last_play = datetime.now()
+        await user.save()
+        await message.reply(f"🎉 <b>Поздравляю! Ты угадал число и выиграл</b> <code>{reward} гр!</code>\nТвой новый баланс <code>{user.drug_count} гр.</code>", parse_mode='HTML')
+    else:
+        await message.reply(f"😢 <b>Увы, ты не угадал. Загаданное число было</b> <code>{secret_number}</code>. <b>Попробуй снова!</b>", parse_mode='HTML')
+        user.last_play = datetime.now()
+        await user.save()
+
+    del games[user_id]
 
 
 @router.message(Command('drug'))
 async def drug_command(message: Message):
     user = await get_user(message.from_user.id)
-
     drug_count, last_use_time = user.drug_count, user.last_use_time
     now = datetime.now()
 
