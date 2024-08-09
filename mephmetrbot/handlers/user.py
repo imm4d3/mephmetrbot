@@ -1,7 +1,7 @@
 from aiogram import Router, F
 import random
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
+from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, InlineKeyboardMarkup
 from aiogram.filters.command import Command, CommandObject
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from mephmetrbot.handlers.models import Users, Clans
@@ -12,6 +12,7 @@ from aiogram.exceptions import TelegramBadRequest
 
 router = Router()
 
+games = {}
 async def update_user_balance_and_drug_count(user_id: int, new_balance: int, new_drug_count: int):
     user = await Users.get(id=user_id)
     user.balance = new_balance
@@ -429,69 +430,6 @@ async def vipbonus_command(message: Message):
         await message.reply("<b>🛑 Вы уже получали сегодня бонус!</b>", parse_mode='HTML')
 
 
-games = {}
-
-@router.message(Command('play'))
-async def play_command(message: Message):
-    user_id = message.from_user.id
-    user = await get_user(message.from_user.id)
-    if user_id in games:
-        await message.reply("❌ <b>Вы уже начали игру. Подождите, пока завершится текущая игра.</b>", parse_mode='HTML')
-        return
-
-    last_play = user.last_play
-    now = datetime.now()
-
-    if last_play:
-        last_play = last_play.replace(tzinfo=None)
-
-    if last_play and (now - last_play).total_seconds() < 3600:
-        remaining_time = timedelta(hours=1) - (now - last_play)
-        remaining_hours = remaining_time.seconds // 3600
-        remaining_minutes = (remaining_time.seconds % 3600) // 60
-
-        if remaining_hours > 0:
-            await message.reply(f'<b>⏳ Ты недавно играл, подожди</b> <code>{remaining_hours} часов</code> <b>и</b><code>{remaining_minutes} минут.</code>', parse_mode='HTML')
-        else:
-            await message.reply(f'<b>⏳ Ты недавно играл, подожди </b><code>{remaining_minutes} минут.</code>', parse_mode='HTML')
-        return
-
-
-    secret_number = random.randint(1, 10)
-    games[user_id] = secret_number
-
-    await message.reply("🎮 <b>Игра началась! Угадай число от 1 до 10. Напиши его прямо сюда.</b>", parse_mode='HTML')
-
-@router.message()
-async def process_guess(message: Message):
-    user_id = message.from_user.id
-    user = await get_user(message.from_user.id)
-    if user_id not in games:
-        return
-
-
-    try:
-        guess = int(message.text)
-    except ValueError:
-        await message.reply("<b>❌ Пожалуйста, введи число от 1 до 10!</b>", parse_mode='HTML')
-        return
-
-    secret_number = games[user_id]
-
-    if guess == secret_number:
-        reward = random.randint(1, 20)
-        user.drug_count += reward
-        user.last_play = datetime.now()
-        await user.save()
-        await message.reply(f"🎉 <b>Поздравляю! Ты угадал число и выиграл</b> <code>{reward} гр!</code>\nТвой новый баланс <code>{user.drug_count} гр.</code>", parse_mode='HTML')
-    else:
-        await message.reply(f"😢 <b>Увы, ты не угадал. Загаданное число было</b> <code>{secret_number}</code>. <b>Попробуй снова!</b>", parse_mode='HTML')
-        user.last_play = datetime.now()
-        await user.save()
-
-    del games[user_id]
-
-
 @router.message(Command('drug'))
 async def drug_command(message: Message):
     user = await get_user(message.from_user.id)
@@ -593,3 +531,62 @@ async def about_command(message: Message):
         InlineKeyboardButton(text='💬 Чат', url='https://t.me/mephmetrchat')
     )
     await message.reply("🧑‍💻 Бот разработан vccuser.t.me и vccleak.t.me", reply_markup=builder.as_markup())
+
+
+@router.message(Command('play'))
+async def play_command(message: Message):
+    user_id = message.from_user.id
+    user = await get_user(message.from_user.id)
+    if user_id in games:
+        await message.reply("❌ <b>Вы уже начали игру. Подождите, пока завершится текущая игра.</b>", parse_mode='HTML')
+        return
+
+    last_play = user.last_play
+    now = datetime.now()
+
+    if last_play:
+        last_play = last_play.replace(tzinfo=None)
+
+    if last_play and (now - last_play).total_seconds() < 3600:
+        remaining_time = timedelta(hours=1) - (now - last_play)
+        remaining_hours = remaining_time.seconds // 3600
+        remaining_minutes = (remaining_time.seconds % 3600) // 60
+
+        if remaining_hours > 0:
+            await message.reply(f'<b>⏳ Ты недавно играл, подожди</b> <code>{remaining_hours} часов</code> <b>и</b><code>{remaining_minutes} минут.</code>', parse_mode='HTML')
+        else:
+            await message.reply(f'<b>⏳ Ты недавно играл, подожди </b><code>{remaining_minutes} минут.</code>', parse_mode='HTML')
+        return
+
+    secret_number = random.randint(1, 10)
+    games[user_id] = secret_number
+
+    buttons = [InlineKeyboardButton(text=str(i), callback_data=f'guess_{i}') for i in range(1, 11)]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[buttons[i:i + 5] for i in range(0, 10, 5)])
+
+    await message.reply("🎮 <b>Игра началась! Угадай число от 1 до 10, выбери его из кнопок ниже.</b>", reply_markup=keyboard, parse_mode='HTML')
+
+@router.callback_query(lambda call: call.data.startswith('guess_'))
+async def process_guess(call: CallbackQuery):
+    user_id = call.from_user.id
+    user = await get_user(call.from_user.id)
+    if user_id not in games:
+        await call.answer("Сначала начни игру с командой /play.")
+        return
+
+    guess = int(call.data.split('_')[1])
+    secret_number = games[user_id]
+
+    if guess == secret_number:
+        reward = random.randint(1, 20)
+        user.drug_count += reward
+        user.last_play = datetime.now()
+        await user.save()
+        await call.message.edit_text(f"🎉 <b>Поздравляю! Ты угадал число и выиграл</b> <code>{reward} гр!</code>\nТвой новый баланс <code>{user.drug_count} гр.</code>", parse_mode='HTML')
+    else:
+        await call.message.edit_text(f"😢 <b>Увы, ты не угадал. Загаданное число было</b> <code>{secret_number}</code>. <b>Попробуй еще раз позднее!</b>", parse_mode='HTML')
+        user.last_play = datetime.now()
+        await user.save()
+
+    del games[user_id]
+    await call.answer()
