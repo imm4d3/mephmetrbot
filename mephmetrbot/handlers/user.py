@@ -444,7 +444,7 @@ async def take_command(message: Message, state: FSMContext):
             if randomed == 'noticed':
                 user.drug_count -= 1
                 await message.reply(
-                    "❌ <b>Жертва тебя заметила</b>, и ты решил убежать. Спиздить меф не получилось. Пока ты бежал, <b>ты потерял</b> <code>1 гр.</code>.",
+                    "❌ <b>Жертва тебя заметила</b>, и ты решил убежать. Спиздить меф не получилось. Пока ты бежал, <b>ты потерял</b> <code>1 гр.</code>",
                     parse_mode='HTML'
                 )
             elif randomed == 'hit':
