@@ -207,13 +207,13 @@ async def clan_top(message: Message):
     top_clans = await Clans.all().order_by('-clan_balance')[:10].values('clan_name', 'clan_balance')
 
     if top_clans:
-        response = "🔝 ТОП 10 МЕФЕДРОНОВЫХ КАРТЕЛЕЙ В МИРЕ 🔝:\n"
+        response = "🔝 ТОП 10 КАРТЕЛЕЙ В МИРЕ 🔝:\n"
         counter = 1
 
         for clan in top_clans:
             clan_name = clan['clan_name']
             clan_balance = clan['clan_balance']
-            response += f"{counter}) <b>{clan_name}</b>: <code>{clan_balance} гр. мефа</code>\n"
+            response += f"{counter}) <b>{clan_name}</b>: <code>{clan_balance} гр.</code>\n"
             counter += 1
 
         await message.reply(response, parse_mode='HTML')

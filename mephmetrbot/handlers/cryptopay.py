@@ -101,7 +101,7 @@ async def checkinvoice_callback(callback: CallbackQuery):
             user.drug_count = round(user.drug_count + int(value), 1)
             await user.save()
             await bot.send_message(callback.message.chat.id,
-                                    f"✅ Ты крут бро ты получил {value} грам грамм мефа, спасибо за поддержку!")
+                                    f"✅ Ты крут бро ты получил {value} гр., спасибо за поддержку!")
             await Invoices.create(invoice_id=invoice_id, status='paid')
             await callback.answer()
             await bot.send_message(
