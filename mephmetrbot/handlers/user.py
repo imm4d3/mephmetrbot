@@ -236,7 +236,7 @@ async def give_command(message: Message, command: CommandObject):
             parse_mode='HTML'
         )
 
-    if user.vip == 1:
+    else:
         recipient.drug_count += value
         user.drug_count -= value
 
