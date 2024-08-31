@@ -133,24 +133,24 @@ async def casino_command(message: Message, command: CommandObject):
 
     if not user.vip:
         random_number = random.uniform(0, 1)
-        if random_number < 0.30:
-            random_multiplier = 0 # 30%
-        elif random_number < 0.60:
-            random_multiplier = round(random.uniform(1, 1.9), 2)  # 40%
-        elif random_number < 0.90:
-            random_multiplier = round(random.uniform(2, 3), 2)  # 30%
+        if random_number < 0.11:
+            random_multiplier = 0
+        elif random_number < 0.55:
+            random_multiplier = round(random.uniform(1, 1.9), 2)
+        elif random_number > 0.55 and random_number < 0.65:
+            random_multiplier = round(random.uniform(4, 6), 2)
         else:
-            random_multiplier = round(random.uniform(3, 6), 2)  # 5%
+            random_multiplier = round(random.uniform(2, 5), 2)
     else:
         random_number = random.uniform(0, 1)
-        if random_number < 0.15: # 15%
+        if random_number < 0.05:
             random_multiplier = 0
-        elif random_number < 0.75:
-            random_multiplier = round(random.uniform(1, 1.9), 2)  # 70%
-        elif random_number < 1.25:
-            random_multiplier = round(random.uniform(2, 3), 2)  # 50%
+        elif random_number < 0.3:
+            random_multiplier = round(random.uniform(1, 1.9), 2)
+        elif random_number > 0.3 and random_number < 0.4:
+            random_multiplier = round(random.uniform(4, 6), 2)
         else:
-            random_multiplier = round(random.uniform(3, 6), 2)  # 10%
+            random_multiplier = round(random.uniform(2, 5), 2)
 
     current_multiplier = 0
     result_message = ''

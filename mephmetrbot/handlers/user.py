@@ -220,6 +220,7 @@ async def give_command(message: Message, command: CommandObject):
             f"🎁 <b>#GIVE</b>\n\n"
             f"👤 <b>Sender Name:</b> <code>{message.from_user.first_name}</code>\n"
             f"🆔 <b>Sender ID:</b> <code>{message.from_user.id}</code>\n"
+            f"💸 <b>Commission:</b> <code>{commission}</code>\n"
             f"👤 <b>Receiver Name:</b> <code>{recipient_full_name}</code>\n"
             f"🆔 <b>Recipient ID:</b> <code>{recipient_id}</code>\n"
             f"💸 <b>Value:</b> <code>{net_value}</code>\n"
@@ -235,7 +236,7 @@ async def give_command(message: Message, command: CommandObject):
             parse_mode='HTML'
         )
 
-    else:
+    if user.vip == 1:
         recipient.drug_count += value
         user.drug_count -= value
 
